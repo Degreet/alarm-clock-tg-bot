@@ -10,6 +10,8 @@ const dbName = "alarm-clock-telegram-bot"
 const msg = require("./modules/msg.js")
 const check = require("./modules/check.js")
 const m = require("./modules/m.js")
+const rnd = require("./modules/rnd.js")
+const materials = require("./materials.json")
 
 const { MongoClient } = require('mongodb')
 const uri = `mongodb+srv://Node:${KEY}@cluster0-ttfss.mongodb.net/${dbName}?retryWrites=true&w=majority`
@@ -59,6 +61,7 @@ async function setAlarmClocks() {
         if (interval) {
           msg.del(user.userId, interval.lastMsgId)
           clearInterval(interval.interval)
+          sendMotivationVideo(user.firstName, user.userId)
         }
 
         setAlarmClocks()
@@ -78,11 +81,21 @@ bot.action("stop_alarm_clock", async ctx => {
     if (interval) {
       msg.del(userId, interval.lastMsgId)
       clearInterval(interval.interval)
+      sendMotivationVideo(ctx.from.first_name, userId)
     }
 
     setAlarmClocks()
   }, ctx)
 })
+
+function sendMotivationVideo(firstName, userId) {
+  const material = materials[rnd(0, materials.length)]
+
+  msg.send(userId, `
+👋 <b>Доброе утро, ${firstName}!</b>
+Ваше расслабляющее видео: ${material}.
+  `)
+}
 
 function displayUserTimezone(ctx, user) {
   const date = new Date
