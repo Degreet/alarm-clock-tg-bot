@@ -133,7 +133,8 @@ bot.command("start", async ctx => {
     else text = `⏰ У вас ещё нет будильника...`
 
     msg.send(userId, `👋 Привет, <b>${firstName}</b>!\n${text}`, !user.alarmClock ?
-      m.build([m.cbb("🆕 Создать будильник", "get_user_timezone")]) : null)
+      m.build([m.cbb("🆕 Создать будильник", "get_user_timezone")]) : m.build(
+        [m.cbb("✏️ Изменить будильник", "create_alarm_clock")]))
   }
 
   check.candidate({ userId }, startFn, async () => {
@@ -155,11 +156,12 @@ bot.action("menu", async ctx => {
   check.candidate({ userId }, async user => {
     let text
 
-    if (user.alarmClock) text = `⏰ Ваш будильник в <b>${alarmClock}</b>.`
+    if (user.alarmClock) text = `⏰ Ваш будильник в <b>${user.alarmClock}:00</b>.`
     else text = `⏰ У вас ещё нет будильника...`
 
     msg.edit(ctx, `👋 Привет, <b>${firstName}</b>!\n${text}`, !user.alarmClock ?
-      m.build([m.cbb("🆕 Создать будильник", "get_user_timezone")]) : null)
+      m.build([m.cbb("🆕 Создать будильник", "get_user_timezone")]) : m.build(
+        [m.cbb("✏️ Изменить будильник", "create_alarm_clock")]))
   }, ctx)
 })
 
@@ -187,49 +189,44 @@ bot.action("create_alarm_clock", async ctx => {
   const userId = ctx.from.id
 
   check.candidate({ userId }, async user => {
-    if (user.alarmClock) {
-      msg.edit(ctx, `⚠️ <b>У вас уже есть будильник!</b>`, m.build([m.cbb("⬅️ Назад", "menu")]))
-    } else {
-      msg.edit(ctx, `
-🆕 <b>Создание будильника</b>
+    msg.edit(ctx, `
+🆕 <b>${user.alarmClock ? "Смена" : "Создание"} будильника</b>
 Выберите время, на которое
 хотите установить будильник.
+${user.alarmClock ? `На данный момент, у вас
+установлен будильник на <b>${user.alarmClock}:00</b>.` : ""}
       `, m.build(
+      [
         [
-          [
-            m.cbb("5:00", "set_alarm_clock_5"),
-            m.cbb("6:00", "set_alarm_clock_6"),
-            m.cbb("7:00", "set_alarm_clock_7"),
-            m.cbb("8:00", "set_alarm_clock_8"),
-            m.cbb("9:00", "set_alarm_clock_9"),
-          ],
-          [
-            m.cbb("❌ Отменить", "menu")
-          ]
+          m.cbb("5:00", "set_alarm_clock_5"),
+          m.cbb("6:00", "set_alarm_clock_6"),
+          m.cbb("7:00", "set_alarm_clock_7"),
+          m.cbb("8:00", "set_alarm_clock_8"),
+          m.cbb("9:00", "set_alarm_clock_9"),
+        ],
+        [
+          m.cbb("❌ Отменить", "menu")
         ]
-      ))
-    }
+      ]
+    ))
   }, ctx)
 })
 
 bot.action(/set_alarm_clock_(.*)/, async ctx => {
   const userId = ctx.from.id
 
-  check.candidate({ userId }, async user => {
-    if (user.alarmClock) {
-      msg.edit(ctx, `⚠️ <b>У вас уже есть будильник!</b>`, m.build([m.cbb("⬅️ Назад", "menu")]))
-    } else {
-      const time = +ctx.match[1]
+  check.candidate({ userId }, async () => {
+    const time = +ctx.match[1]
 
-      await users.updateOne({ userId }, {
-        $set: {
-          alarmClock: time
-        }
-      })
+    await users.updateOne({ userId }, {
+      $set: {
+        alarmClock: time
+      }
+    })
 
-      msg.edit(ctx, `✅ Вы успешно установили будильник на <b>${time}:00</b>.`)
-      setAlarmClocks()
-    }
+    msg.edit(ctx, `✅ Вы успешно установили будильник на <b>${time}:00</b>.`, m.build(
+      [m.cbb("⬅️ Назад", "menu")]))
+    setAlarmClocks()
   }, ctx)
 })
 
