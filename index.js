@@ -15,7 +15,12 @@ const { MongoClient } = require('mongodb')
 const uri = `mongodb+srv://Node:${KEY}@cluster0-ttfss.mongodb.net/${dbName}?retryWrites=true&w=majority`
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true })
 
+const intervals = []
+const timeouts = []
+process.on("uncaughtException", console.log)
+
 async function setAlarmClocks() {
+  timeouts.forEach(timeout => clearTimeout(timeout))
   const candidates = await users.find({ alarmClock: { $exists: true } }).toArray()
 
   candidates.forEach(user => {
@@ -24,14 +29,60 @@ async function setAlarmClocks() {
     const now = new Date
     now.setHours(now.getHours() + userTimezone)
     const next = new Date(now.getFullYear(), now.getMonth(),
-      now.getDate() + (now.getHours() > userAlarmTime), userAlarmTime)
+      now.getDate() + (now.getHours() >= userAlarmTime), userAlarmTime)
     const timeout = next - now
 
-    setTimeout(() => {
-      msg.send(user.userId, `🕓 <b>Пора вставать!</b>`)
+    const timeout2 = setTimeout(() => {
+      let id
+
+      let interval = setInterval(() => {
+        msg.del(user.userId, id)
+        bot.telegram.sendMessage(user.userId, "🕓 <b>Пора вставать!</b>", {
+          parse_mode: "html",
+          reply_markup: m.build([
+            m.cbb("СТОП!", "stop_alarm_clock")
+          ]).reply_markup,
+        }).then(message => {
+          id = message.message_id
+          intervals.find(u => u.userId == user.userId).lastMsgId = message.message_id
+        })
+      }, 1500)
+
+      intervals.push({
+        userId: user.userId,
+        interval
+      })
+
+      setTimeout(() => {
+        const interval = intervals.find(u => u.userId == user.userId)
+
+        if (interval) {
+          msg.del(user.userId, interval.lastMsgId)
+          clearInterval(interval.interval)
+        }
+
+        setAlarmClocks()
+      }, 30000)
     }, timeout)
+
+    timeouts.push(timeout2)
   })
 }
+
+bot.action("stop_alarm_clock", async ctx => {
+  const userId = ctx.from.id
+
+  check.candidate({ userId }, async () => {
+    const interval = intervals.find(user => user.userId == userId)
+
+    if (interval) {
+      msg.del(userId, interval.lastMsgId)
+      clearInterval(interval.interval)
+    }
+
+    setAlarmClocks()
+  }, ctx)
+})
 
 function displayUserTimezone(ctx, user) {
   const date = new Date
@@ -65,7 +116,7 @@ bot.command("start", async ctx => {
   async function startFn(user) {
     let text
 
-    if (user.alarmClock) text = `⏰ Ваш будильник в <b>${alarmClock}</b>.`
+    if (user.alarmClock) text = `⏰ Ваш будильник в <b>${user.alarmClock}:00</b>.`
     else text = `⏰ У вас ещё нет будильника...`
 
     msg.send(userId, `👋 Привет, <b>${firstName}</b>!\n${text}`, !user.alarmClock ?
@@ -109,7 +160,7 @@ bot.action(/set_user_timezone_(.*)/, async ctx => {
       }
     })
 
-    displayUserTimezone(ctx, {timezone: user.timezone + +ctx.match[1]})
+    displayUserTimezone(ctx, { timezone: user.timezone + +ctx.match[1] })
   }, ctx)
 })
 

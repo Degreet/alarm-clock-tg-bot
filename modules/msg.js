@@ -14,5 +14,9 @@ module.exports = {
 
   delLast(ctx) {
     ctx.deleteMessage()
+  },
+
+  del(userId, msgId) {
+    bot.telegram.deleteMessage(userId, msgId)
   }
 }
