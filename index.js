@@ -65,7 +65,7 @@ async function setAlarmClocks() {
         }
 
         setAlarmClocks()
-      }, 30000)
+      }, 120000)
     }, timeout)
 
     timeouts.push(timeout2)
