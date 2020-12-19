@@ -134,10 +134,10 @@ bot.command("start", async ctx => {
 
     msg.edit(ctx, `👋 Привет, <b>${firstName}</b>!\n${text}`, !user.alarmClock ?
       m.build([m.cbb("🆕 Создать будильник", "get_user_timezone")]) : m.build(
-        [[
-          m.cbb("✏️ Изменить будильник", "create_alarm_clock"),
-          m.cbb("🗑 Удалить будильник", "confirm_delete_alarm_clock")
-        ]]
+        [
+          [m.cbb("✏️ Изменить будильник", "create_alarm_clock")],
+          [m.cbb("🗑 Удалить будильник", "confirm_delete_alarm_clock")]
+        ]
       ))
   }
 
